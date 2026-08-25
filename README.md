@@ -23,5 +23,12 @@ Aplikasi web interaktif untuk belajar bahasa Jepang dari tingkat dasar (Hiragana
 - JSON (Data storage)
 
 ## Struktur Folder
+mazu-learn-jp/
+├── index.html
+├── listening-data.json 
+├── assets/
+ └── your_image or audio (optional)
+
+
 # mazu-learn-jp
 Learning Media Models: Web-based Independent Learning
