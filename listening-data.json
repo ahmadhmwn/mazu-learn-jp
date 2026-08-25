@@ -1,0 +1,124 @@
+{
+  "n5": [
+    {
+      "id": 1,
+      "title": "Membeli Apel",
+      "question": "Wanita di percakapan akan membeli apa?",
+      "transcript": [
+        "A: すみません、このりんごはいくらですか？",
+        "B: 一つ150円です。",
+        "A: じゃあ、3つください。",
+        "B: かしこまりました。ありがとうございます。"
+      ],
+      "answer": "Wanita tersebut membeli 3 buah apel."
+    },
+    {
+      "id": 2,
+      "title": "Bertemu di Stasiun",
+      "question": "Di mana dan jam berapa mereka akan bertemu?",
+      "transcript": [
+        "A: 明日、何時に会いますか？",
+        "B: 3時に駅の前で会いましょう。",
+        "A: わかりました。3時に駅の前ですね。"
+      ],
+      "answer": "Mereka akan bertemu di depan stasiun pada jam 3."
+    },
+    {
+      "id": 3,
+      "title": "Pesan Makanan",
+      "question": "Apa yang dipesan oleh pelanggan?",
+      "transcript": [
+        "A: いらっしゃいませ。ご注文は？",
+        "B: ラーメンを一つください。",
+        "A: かしこまりました。お飲み物は？",
+        "B: 水をお願いします。"
+      ],
+      "answer": "Pelanggan memesan satu ramen dan air putih."
+    },
+    {
+      "id": 4,
+      "title": "Tanya Alamat",
+      "question": "Ke mana orang tersebut ingin pergi?",
+      "transcript": [
+        "A: すみません、郵便局はどこですか？",
+        "B: あそこです。銀行の隣です。",
+        "A: ありがとうございます。",
+        "B: どういたしまして。"
+      ],
+      "answer": "Orang tersebut ingin pergi ke kantor pos (郵便局)."
+    },
+    {
+      "id": 5,
+      "title": "Belanja Baju",
+      "question": "Berapa harga baju yang dibeli?",
+      "transcript": [
+        "A: このシャツはいくらですか？",
+        "B: 2500円です。",
+        "A: じゃあ、これをください。",
+        "B: ありがとうございます。"
+      ],
+      "answer": "Harga baju tersebut adalah 2500 yen."
+    }
+  ],
+  "n4": [
+    {
+      "id": 1,
+      "title": "Rencana Liburan",
+      "question": "Apa yang akan dilakukan pembicara setelah ini?",
+      "transcript": [
+        "A: 田中さん、今から何をしますか？",
+        "B: まず、銀行に行きます。それから、友達と一緒に昼ごはんを食べます。",
+        "A: そうですか。じゃあ、また後で。"
+      ],
+      "answer": "Pembicara akan pergi ke bank, lalu makan siang dengan teman."
+    },
+    {
+      "id": 2,
+      "title": "Prakiraan Cuaca",
+      "question": "Apa yang terjadi pada cuaca besok?",
+      "transcript": [
+        "A: 明日の天気はどうですか？",
+        "B: 午前中は晴れますが、午後から雨が降るそうです。",
+        "A: そうですか。じゃあ、傘を持っていったほうがいいですね。"
+      ],
+      "answer": "Cuaca akan cerah di pagi hari, tapi akan turun hujan mulai siang."
+    },
+    {
+      "id": 3,
+      "title": "Pergi ke Dokter",
+      "question": "Apa yang disarankan dokter?",
+      "transcript": [
+        "A: 最近、頭が痛いです。",
+        "B: それは大変ですね。ゆっくり休んでください。",
+        "A: 薬はもらえますか？",
+        "B: はい、こちらがお薬です。3日間飲んでください。"
+      ],
+      "answer": "Dokter menyarankan untuk istirahat dan meminum obat selama 3 hari."
+    },
+    {
+      "id": 4,
+      "title": "Reservasi Hotel",
+      "question": "Kapan dan berapa malam dia menginap?",
+      "transcript": [
+        "A: こんにちは。予約をお願いします。",
+        "B: はい。何日ご滞在ですか？",
+        "A: 12月25日から3泊です。",
+        "B: かしこまりました。シングルルームでよろしいですか？"
+      ],
+      "answer": "Dia menginap selama 3 malam mulai 25 Desember."
+    },
+    {
+      "id": 5,
+      "title": "Percakapan Telepon",
+      "question": "Apa yang akan dilakukan setelah percakapan?",
+      "transcript": [
+        "A: もしもし、佐藤さんのお宅ですか？",
+        "B: はい、そうです。",
+        "A: 佐藤さんはいらっしゃいますか？",
+        "B: すみません、今出かけています。",
+        "A: では、また後で電話します。"
+      ],
+      "answer": "Pembicara akan menelepon lagi nanti."
+    }
+  ]
+}
