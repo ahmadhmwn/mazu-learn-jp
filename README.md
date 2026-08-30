@@ -55,6 +55,7 @@ mazu-learn-jp/
 **1. Using VSC with Git**
 - git clone https://github.com/ahmadhmwn/mazu-learn-jp.git
 - cd mazu-learn-jp
+
 **2. Manual**
 - Open the repository page: https://github.com/ahmadhmwn/mazu-learn-jp
 - Click the green button labeled “Code.”
@@ -65,6 +66,6 @@ mazu-learn-jp/
 Documentation: https://mazu-learn-jp.netlify.app/
 Learning Media Models: Web-based Independent Learning
 
-## This project is still under active development. We really appreciate it if you try installing it and give a star ⭐ on our GitHub repository. Thank you for your support!
+**This project is still under active development. We really appreciate it if you try installing it and give a star ⭐ on our GitHub repository. Thank you for your support!**
 
-## このプロジェクトは現在開発中です。もしよろしければ、インストールしてGitHubリポジトリにスター⭐を付けていただけると嬉しいです。ご支援ありがとうございます！
+**このプロジェクトは現在開発中です。もしよろしければ、インストールしてGitHubリポジトリにスター⭐を付けていただけると嬉しいです。ご支援ありがとうございます！**
