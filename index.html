@@ -71,6 +71,36 @@
             font-weight: 300;
         }
 
+        .lang-switch {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            padding: 0.25rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .lang-switch button {
+            border: none;
+            background: transparent;
+            color: white;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 0.45rem 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .lang-switch button.active {
+            background: #fff;
+            color: var(--primary-color);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+        }
+
         /* ============ NAVIGATION ============ */
         nav {
             display: flex;
@@ -1048,27 +1078,31 @@
 
     <header>
         <h1><img src="assets/icon_1.png" width="36" height="36"> Mazuhan - LearnJP</h1>
-        <p><i class="fas fa-graduation-cap"></i> Belajar Bahasa Jepang dari Dasar hingga JLPT N5 &amp; N4</p>
+        <p data-i18n="header.subtitle"><i class="fas fa-graduation-cap"></i> <span class="i18n-label">Belajar Bahasa Jepang dari Dasar hingga JLPT N5 &amp; N4</span></p>
+        <div class="lang-switch" aria-label="Language switcher">
+            <button type="button" class="lang-btn active" data-lang="id">ID</button>
+            <button type="button" class="lang-btn" data-lang="en">EN</button>
+        </div>
     </header>
 
     <nav>
-        <button class="tab-btn active" onclick="switchTab(event, 'dasar')">
-            <i class="fas fa-pen-fancy"></i> Dasar
+        <button class="tab-btn active" data-i18n="nav.dasar" onclick="switchTab(event, 'dasar')">
+            <i class="fas fa-pen-fancy"></i> <span class="i18n-label">Dasar</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(event, 'n5')">
-            <i class="fas fa-seedling"></i> N5
+        <button class="tab-btn" data-i18n="nav.n5" onclick="switchTab(event, 'n5')">
+            <i class="fas fa-seedling"></i> <span class="i18n-label">N5</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(event, 'n4')">
-            <i class="fas fa-tree"></i> N4
+        <button class="tab-btn" data-i18n="nav.n4" onclick="switchTab(event, 'n4')">
+            <i class="fas fa-tree"></i> <span class="i18n-label">N4</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(event, 'reading')">
-            <i class="fas fa-book-open"></i> Reading
+        <button class="tab-btn" data-i18n="nav.reading" onclick="switchTab(event, 'reading')">
+            <i class="fas fa-book-open"></i> <span class="i18n-label">Reading</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(event, 'listening')">
-            <i class="fas fa-headphones"></i> Listening
+        <button class="tab-btn" data-i18n="nav.listening" onclick="switchTab(event, 'listening')">
+            <i class="fas fa-headphones"></i> <span class="i18n-label">Listening</span>
         </button>
-        <button class="tab-btn" onclick="switchTab(event, 'flashcard')">
-            <i class="fas fa-layer-group"></i> Flashcard
+        <button class="tab-btn" data-i18n="nav.flashcard" onclick="switchTab(event, 'flashcard')">
+            <i class="fas fa-layer-group"></i> <span class="i18n-label">Flashcard</span>
         </button>
     </nav>
 
@@ -1077,8 +1111,8 @@
         <!-- ==================== TAB DASAR ==================== -->
         <div id="dasar" class="tab-content active">
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Hiragana <span class="badge badge-both">Dasar</span></h2>
-                <p>Hiragana digunakan untuk kata asli bahasa Jepang, tata bahasa, dan partikel.</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.hiragana">Hiragana</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.hiraDesc">Hiragana digunakan untuk kata asli bahasa Jepang, tata bahasa, dan partikel.</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">あ</div>
@@ -1268,8 +1302,8 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Katakana <span class="badge badge-both">Dasar</span></h2>
-                <p>Katakana digunakan untuk menulis kata serapan asing (gairaigo) dan onomatope.</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.katakana">Katakana</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.kataDesc">Katakana digunakan untuk menulis kata serapan asing (gairaigo) dan onomatope.</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">ア</div>
@@ -1460,9 +1494,8 @@
 
             <!-- Tambahan untuk Hiragana dengan Dakuten (") dan Handakuten (゜) -->
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Hiragana dengan Dakuten (") <span
-                        class="badge badge-both">Dasar</span></h2>
-                <p>Dakuten (゛) mengubah konsonan tidak bersuara menjadi bersuara:</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.dakuten">Dakuten</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.dakutenDesc">Dakuten (゛) mengubah konsonan tidak bersuara menjadi bersuara:</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">が</div>
@@ -1551,9 +1584,8 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Hiragana dengan Handakuten (゜) <span
-                        class="badge badge-both">Dasar</span></h2>
-                <p>Handakuten (゜) mengubah konsonan /h/ menjadi /p/:</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.handakuten">Handakuten</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.handakutenDesc">Handakuten (゜) mengubah konsonan /h/ menjadi /p/:</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">ぱ</div>
@@ -1580,9 +1612,8 @@
 
             <!-- Tambahan untuk Katakana dengan Dakuten (") dan Handakuten (゜) -->
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Katakana dengan Dakuten (") <span
-                        class="badge badge-both">Dasar</span></h2>
-                <p>Dakuten (゛) mengubah konsonan tidak bersuara menjadi bersuara:</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.dakuten">Dakuten</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.dakutenDesc">Dakuten (゛) mengubah konsonan tidak bersuara menjadi bersuara:</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">ガ</div>
@@ -1671,9 +1702,8 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Katakana dengan Handakuten (゜) <span
-                        class="badge badge-both">Dasar</span></h2>
-                <p>Handakuten (゜) mengubah konsonan /h/ menjadi /p/:</p>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.handakuten">Handakuten</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span></h2>
+                <p class="i18n-label" data-i18n="basic.handakutenDesc">Handakuten (゜) mengubah konsonan /h/ menjadi /p/:</p>
                 <div class="grid-huruf">
                     <div class="huruf-box">
                         <div class="jp">パ</div>
@@ -1699,9 +1729,9 @@
             </div>
 
             <div class="card">
-                <h2><i class="fas fa-pen-fancy"></i> Yōon (Kombinasi Huruf) <span class="badge badge-both">Dasar</span>
+                <h2><i class="fas fa-pen-fancy"></i> <span class="i18n-label" data-i18n="basic.yoon">Yōon</span> <span class="badge badge-both" data-i18n="basic.basicBadge">Dasar</span>
                 </h2>
-                <p>Kombinasi huruf dengan や (ya), ゆ (yu), よ (yo) untuk menghasilkan bunyi baru:</p>
+                <p class="i18n-label" data-i18n="basic.yoonDesc">Kombinasi huruf dengan や (ya), ゆ (yu), よ (yo) untuk menghasilkan bunyi baru:</p>
                 <div class="grid-huruf" style="grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));">
                     <div class="huruf-box">
                         <div class="jp">きゃ</div>
@@ -2863,17 +2893,17 @@
         <!-- ==================== TAB READING ==================== -->
         <div id="reading" class="tab-content">
             <div class="card">
-                <h2><i class="fas fa-book-open"></i> Latihan Membaca <span class="badge badge-both">Dokkai</span></h2>
+                <h2><i class="fas fa-book-open"></i> <span class="i18n-label" data-i18n="reading.title">Latihan Membaca</span> <span class="badge badge-both" data-i18n="reading.badge">Dokkai</span></h2>
 
                 <!-- Level Selector -->
                 <div class="level-selector" id="readingLevelSelector">
                     <button class="active-level" onclick="switchReadingLevel('n5')">
                         <i class="fas fa-seedling"></i> N5 <span class="badge badge-n5" style="font-size:0.6rem;">8
-                            teks</span>
+                            <span class="i18n-label" data-i18n="reading.listLabel">teks</span></span>
                     </button>
                     <button onclick="switchReadingLevel('n4')">
                         <i class="fas fa-tree"></i> N4 <span class="badge badge-n4" style="font-size:0.6rem;">7
-                            teks</span>
+                            <span class="i18n-label" data-i18n="reading.listLabel">teks</span></span>
                     </button>
                 </div>
 
@@ -3677,25 +3707,25 @@
         <!-- ==================== TAB LISTENING ==================== -->
         <div id="listening" class="tab-content">
             <div class="card">
-                <h2><i class="fas fa-headphones"></i> Latihan Mendengar <span class="badge badge-both">Choukai</span>
+                <h2><i class="fas fa-headphones"></i> <span class="i18n-label" data-i18n="listening.title">Latihan Mendengar</span> <span class="badge badge-both" data-i18n="listening.badge">Choukai</span>
                 </h2>
 
                 <!-- Level Selector -->
                 <div class="level-selector" id="listeningLevelSelector">
                     <button class="active-level" onclick="switchListeningLevel('n5')">
                         <i class="fas fa-seedling"></i> N5 <span class="badge badge-n5" style="font-size:0.6rem;">5
-                            percakapan</span>
+                            <span class="i18n-label" data-i18n="listening.conversationLabel">percakapan</span></span>
                     </button>
                     <button onclick="switchListeningLevel('n4')">
                         <i class="fas fa-tree"></i> N4 <span class="badge badge-n4" style="font-size:0.6rem;">5
-                            percakapan</span>
+                            <span class="i18n-label" data-i18n="listening.conversationLabel">percakapan</span></span>
                     </button>
                 </div>
 
                 <!-- Loading Indicator -->
                 <div id="listeningLoading" style="text-align: center; padding: 20px; display: none;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
-                    <p>Memuat data percakapan...</p>
+                    <p class="i18n-label" data-i18n="listening.loading">Memuat data percakapan...</p>
                 </div>
 
                 <!-- Listening N5 -->
@@ -3710,15 +3740,14 @@
         <!-- ==================== TAB FLASHCARD ==================== -->
         <div id="flashcard" class="tab-content">
             <div class="card">
-                <h2><i class="fas fa-layer-group"></i> Flashcard Kanji <span class="badge badge-both">Interaktif</span>
+                <h2><i class="fas fa-layer-group"></i> <span class="i18n-label" data-i18n="flashcard.title">Flashcard Kanji</span> <span class="badge badge-both" data-i18n="flashcard.badge">Interaktif</span>
                 </h2>
-                <p style="text-align: center; margin-bottom: 1rem;">Klik kartu untuk melihat arti dan cara baca (On'yomi
-                    &amp; Kun'yomi).</p>
+                <p class="i18n-label" data-i18n="flashcard.subtitle" style="text-align: center; margin-bottom: 1rem;">Klik kartu untuk melihat arti dan cara baca (On'yomi &amp; Kun'yomi).</p>
 
                 <!-- Level Selector -->
                 <div class="level-selector" style="justify-content: center;">
                     <button class="active-level" onclick="switchFlashcardLevel('all')">
-                        <i class="fas fa-layer-group"></i> Semua
+                        <i class="fas fa-layer-group"></i> <span class="i18n-label" data-i18n="flashcard.all">Semua</span>
                     </button>
                     <button onclick="switchFlashcardLevel('n5')">
                         <i class="fas fa-seedling"></i> N5
@@ -3734,7 +3763,7 @@
                             <div class="front">
                                 <div class="kanji-main" id="cardKanji">日</div>
                                 <div class="hint-text">
-                                    <i class="fas fa-mouse-pointer"></i> Klik untuk membalik
+                                    <i class="fas fa-mouse-pointer"></i> <span class="i18n-label" data-i18n="flashcard.flip">Klik untuk membalik</span>
                                 </div>
                             </div>
                             <div class="back">
@@ -3763,13 +3792,13 @@
 
                     <div class="flashcard-controls">
                         <button class="btn-prev" onclick="prevCard()">
-                            <i class="fas fa-chevron-left"></i> Sebelumnya
+                            <i class="fas fa-chevron-left"></i> <span class="i18n-label" data-i18n="flashcard.prev">Sebelumnya</span>
                         </button>
                         <button class="btn-next" onclick="nextCard()">
-                            Selanjutnya <i class="fas fa-chevron-right"></i>
+                            <span class="i18n-label" data-i18n="flashcard.next">Selanjutnya</span> <i class="fas fa-chevron-right"></i>
                         </button>
                         <button class="btn-shuffle" onclick="shuffleCards()">
-                            <i class="fas fa-random"></i> Acak
+                            <i class="fas fa-random"></i> <span class="i18n-label" data-i18n="flashcard.shuffle">Acak</span>
                         </button>
                     </div>
                 </div>
@@ -3780,7 +3809,7 @@
 
     <footer>
         <p><span id="tahun"></span> Mazuhan - Learn JP</p>
-        <p style="font-size: 0.85rem; opacity: 0.7;"> Provided by 日本語のクラス - with Ahmad先生</p>
+        <p class="i18n-label" data-i18n="footer.provided" style="font-size: 0.85rem; opacity: 0.7;">Provided by 日本語のクラス - with Ahmad先生</p>
     </footer>
 
     <script>
@@ -4117,23 +4146,24 @@
 
         function updateCard() {
             const card = document.getElementById("kanjiCard");
-            card.classList.remove("flipped");
+            if (card) card.classList.remove("flipped");
 
             const data = currentFilteredData[currentCardIndex];
             if (!data) return;
 
             document.getElementById("cardKanji").innerText = data.kanji;
-            document.getElementById("cardTitle").innerText = "Arti";
+            document.getElementById("cardTitle").innerText = currentLanguage === 'en' ? 'Meaning' : 'Arti';
             document.getElementById("cardArti").innerText = data.arti;
             document.getElementById("cardRead").innerHTML =
                 "On'yomi: " + data.onyomi + "<br>Kun'yomi: " + data.kunyomi;
             document.getElementById("cardExample").innerHTML =
-                '<i class="fas fa-pen"></i> Contoh: ' + data.contoh;
+                '<i class="fas fa-pen"></i> ' + (currentLanguage === 'en' ? 'Example' : 'Contoh') + ': ' + data.contoh;
 
+            const total = currentFilteredData.length || 1;
             document.getElementById("cardCounter").innerText =
-                (currentCardIndex + 1) + " dari " + currentFilteredData.length;
+                (currentCardIndex + 1) + " dari " + total;
             document.getElementById("progressFill").style.width =
-                ((currentCardIndex + 1) / currentFilteredData.length * 100) + "%";
+                ((currentCardIndex + 1) / total * 100) + "%";
             document.getElementById("cardLevel").innerHTML = getLevelBadge(data.level);
         }
 
@@ -4193,13 +4223,158 @@
             });
         }
 
+        const translations = {
+            id: {
+                header: { subtitle: 'Belajar Bahasa Jepang dari Dasar hingga JLPT N5 & N4' },
+                nav: { dasar: 'Dasar', n5: 'N5', n4: 'N4', reading: 'Reading', listening: 'Listening', flashcard: 'Flashcard' },
+                flashcard: { meaning: 'Arti', example: 'Contoh', all: 'Semua', loading: 'Memuat...', next: 'Lanjut', prev: 'Sebelum', shuffle: 'Acak', level: 'Level' },
+                basic: {
+                    hiragana: 'Hiragana', katakana: 'Katakana', basicBadge: 'Dasar', dakuten: 'Dakuten', handakuten: 'Handakuten', yoon: 'Yōon', hiraDesc: 'Hiragana digunakan untuk kata asli bahasa Jepang, tata bahasa, dan partikel.', kataDesc: 'Katakana digunakan untuk menulis kata serapan asing (gairaigo) dan onomatope.', dakutenDesc: 'Dakuten (゛) mengubah konsonan tidak bersuara menjadi bersuara:', handakutenDesc: 'Handakuten (゜) mengubah konsonan /h/ menjadi /p/:', yoonDesc: 'Kombinasi huruf dengan や (ya), ゆ (yu), よ (yo) untuk menghasilkan bunyi baru:'
+                },
+                reading: {
+                    title: 'Latihan Membaca', badge: 'Dokkai', translation: 'Terjemahan', question: 'Pertanyaan', answer: 'Jawaban', n5: 'N5', n4: 'N4', viewTranscript: 'Lihat Transkrip', listenTranscript: 'Dengarkan transkrip', viewText: 'Lihat Teks', listLabel: 'teks'
+                },
+                listening: { title: 'Latihan Mendengar', badge: 'Choukai', conversationLabel: 'percakapan', loading: 'Memuat data percakapan...', viewTranscript: 'Lihat Transkrip', listen: 'Dengar', answer: 'Jawaban', question: 'Pertanyaan' },
+                flashcard: { title: 'Flashcard Kanji', badge: 'Interaktif', subtitle: 'Klik kartu untuk melihat arti dan cara baca (On\'yomi & Kun\'yomi).', all: 'Semua', flip: 'Klik untuk membalik', next: 'Selanjutnya', prev: 'Sebelumnya', shuffle: 'Acak' },
+                footer: { provided: 'Disediakan oleh 日本語のクラス - bersama Ahmad先生' },
+                common: { start: 'Mulai', listen: 'Dengar', stop: 'Stop', view: 'Lihat', answer: 'Jawaban', question: 'Pertanyaan' }
+            },
+            en: {
+                header: { subtitle: 'Learn Japanese from Beginner to JLPT N5 & N4' },
+                nav: { dasar: 'Basic', n5: 'N5', n4: 'N4', reading: 'Reading', listening: 'Listening', flashcard: 'Flashcard' },
+                flashcard: { meaning: 'Meaning', example: 'Example', all: 'All', loading: 'Loading...', next: 'Next', prev: 'Previous', shuffle: 'Shuffle', level: 'Level', title: 'Kanji Flashcards', badge: 'Interactive', subtitle: 'Click the card to see the meaning and reading (On\'yomi & Kun\'yomi).', flip: 'Click to flip', all: 'All' },
+                basic: {
+                    hiragana: 'Hiragana', katakana: 'Katakana', basicBadge: 'Basic', dakuten: 'Dakuten', handakuten: 'Handakuten', yoon: 'Yōon', hiraDesc: 'Hiragana is used for native Japanese words, grammar, and particles.', kataDesc: 'Katakana is used for foreign loanwords (gairaigo) and onomatopoeia.', dakutenDesc: 'Dakuten (゛) changes voiceless consonants into voiced consonants:', handakutenDesc: 'Handakuten (゜) changes /h/ sounds into /p/:', yoonDesc: 'Letter combinations with や (ya), ゆ (yu), and よ (yo) create new sounds:'
+                },
+                reading: {
+                    title: 'Reading Practice', badge: 'Dokkai', translation: 'Translation', question: 'Question', answer: 'Answer', n5: 'N5', n4: 'N4', viewTranscript: 'View Transcript', listenTranscript: 'Listen to transcript', viewText: 'View Text', listLabel: 'texts'
+                },
+                listening: { title: 'Listening Practice', badge: 'Choukai', conversationLabel: 'conversations', loading: 'Loading conversation data...', viewTranscript: 'View Transcript', listen: 'Listen', answer: 'Answer', question: 'Question' },
+                footer: { provided: 'Provided by 日本語のクラス - with Ahmad先生' },
+                common: { start: 'Start', listen: 'Listen', stop: 'Stop', view: 'View', answer: 'Answer', question: 'Question' }
+            }
+        };
+
+        let currentLanguage = localStorage.getItem('mazu-language') || 'id';
+
+        function getTranslation(key) {
+            const segments = key.split('.');
+            let current = translations[currentLanguage];
+            for (const segment of segments) {
+                current = current?.[segment];
+                if (current === undefined) return key;
+            }
+            return current;
+        }
+
+        function applyTranslations() {
+            document.documentElement.lang = currentLanguage === 'en' ? 'en' : 'id';
+            document.title = currentLanguage === 'en' ? 'Mazuhan: Learn Japanese' : 'Mazuhan: Belajar Bahasa Jepang';
+
+            document.querySelectorAll('[data-i18n]').forEach((element) => {
+                const text = getTranslation(element.dataset.i18n);
+                const label = element.querySelector('.i18n-label');
+                if (text && text !== element.dataset.i18n) {
+                    if (label) {
+                        label.textContent = text;
+                    } else {
+                        element.textContent = text;
+                    }
+                }
+            });
+
+            document.querySelectorAll('.i18n-label').forEach((element) => {
+                const key = element.dataset.i18n;
+                if (!key) return;
+                const text = getTranslation(key);
+                if (text && text !== key) {
+                    element.textContent = text;
+                }
+            });
+
+            document.querySelectorAll('.reading-translation h4').forEach((el) => {
+                const label = currentLanguage === 'en' ? 'Translation' : 'Terjemahan';
+                el.innerHTML = '<i class="fas fa-language"></i> ' + label;
+            });
+
+            document.querySelectorAll('.reading-questions h4').forEach((el) => {
+                const label = currentLanguage === 'en' ? 'Question' : 'Pertanyaan';
+                el.innerHTML = '<i class="fas fa-question-circle"></i> ' + label;
+            });
+
+            document.querySelectorAll('.listening-item .listening-body .answer-section strong').forEach((el) => {
+                const label = currentLanguage === 'en' ? 'Answer' : 'Jawaban';
+                el.innerHTML = '<i class="fas fa-check-circle"></i> ' + label + ':';
+            });
+
+            document.querySelectorAll('.listening-item .listening-header strong').forEach((el) => {
+                const text = el.textContent.trim();
+                const match = text.match(/^(Percakapan|Conversation)\s*(.*)$/);
+                if (match) {
+                    const id = match[2].trim();
+                    el.textContent = currentLanguage === 'en' ? 'Conversation ' + id : 'Percakapan ' + id;
+                }
+            });
+
+            document.querySelectorAll('.section-toggle h3').forEach((el) => {
+                const titleMap = {
+                    'Percakapan Sehari-hari': currentLanguage === 'en' ? 'Daily Conversation' : 'Percakapan Sehari-hari',
+                    'Percakapan Sehari-hari N4': currentLanguage === 'en' ? 'Daily Conversation N4' : 'Percakapan Sehari-hari N4',
+                    'Angka & Waktu': currentLanguage === 'en' ? 'Numbers & Time' : 'Angka & Waktu',
+                    'JLPT N4': currentLanguage === 'en' ? 'JLPT N4' : 'JLPT N4',
+                    'Level Menengah Bawah': currentLanguage === 'en' ? 'Lower Intermediate Level' : 'Level Menengah Bawah',
+                    'Tata Bahasa N4': currentLanguage === 'en' ? 'N4 Grammar' : 'Tata Bahasa N4',
+                    'Kosakata N4': currentLanguage === 'en' ? 'N4 Vocabulary' : 'Kosakata N4',
+                    'Kanji JLPT N4 (40 Kanji)': currentLanguage === 'en' ? 'JLPT N4 Kanji (40 Kanji)' : 'Kanji JLPT N4 (40 Kanji)',
+                    'Latihan Mendengar': currentLanguage === 'en' ? 'Listening Practice' : 'Latihan Mendengar',
+                    'Flashcard Kanji': currentLanguage === 'en' ? 'Kanji Flashcards' : 'Flashcard Kanji'
+                };
+
+                const children = Array.from(el.childNodes);
+                const textNode = children.find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                if (textNode) {
+                    const raw = textNode.textContent.trim();
+                    if (titleMap[raw]) {
+                        textNode.textContent = titleMap[raw];
+                    }
+                }
+            });
+
+            const langButtons = document.querySelectorAll('.lang-btn');
+            langButtons.forEach((button) => {
+                button.classList.toggle('active', button.dataset.lang === currentLanguage);
+            });
+
+            const meaningText = currentLanguage === 'en' ? 'Meaning' : 'Arti';
+            const exampleText = currentLanguage === 'en' ? 'Example' : 'Contoh';
+            const cardTitle = document.getElementById('cardTitle');
+            const cardExample = document.getElementById('cardExample');
+
+            if (cardTitle) cardTitle.textContent = meaningText;
+            if (cardExample) cardExample.innerHTML = '<i class="fas fa-pen"></i> ' + exampleText + ': ' + (currentFilteredData[currentCardIndex]?.contoh || '');
+        }
+
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('mazu-language', lang);
+            applyTranslations();
+            if (document.getElementById('listeningN5')) renderListeningData('n5');
+            if (document.getElementById('listeningN4')) renderListeningData('n4');
+            updateCard();
+        }
+
         // ============ INISIALISASI ============
         // Set default active levels
         document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.lang-btn').forEach((button) => {
+                button.addEventListener('click', () => switchLanguage(button.dataset.lang));
+            });
+
             // Initialize flashcard
             currentFilteredData = [...flashcardData];
             currentCardIndex = 0;
             updateCard();
+            applyTranslations();
 
             // Initialize reading and listening to N5
             switchReadingLevel('n5');
@@ -4658,7 +4833,7 @@
             currentSpeech = null;
             document.querySelectorAll('.speaking').forEach(btn => {
                 btn.classList.remove('speaking');
-                btn.innerHTML = '<i class="fas fa-play"></i> Dengar';
+                btn.innerHTML = '<i class="fas fa-play"></i> ' + (currentLanguage === 'en' ? 'Listen' : 'Dengar');
             });
         }
 
@@ -4724,6 +4899,28 @@
                 return;
             }
 
+            const labels = currentLanguage === 'en'
+                ? {
+                    conversation: 'Conversation',
+                    listenAll: 'Listen to whole conversation',
+                    listen: 'Listen',
+                    question: 'Question',
+                    transcript: 'View Transcript',
+                    listenTranscript: 'Listen to transcript',
+                    answer: 'Answer',
+                    answerLabel: 'Answer:'
+                }
+                : {
+                    conversation: 'Percakapan',
+                    listenAll: 'Dengarkan seluruh percakapan',
+                    listen: 'Dengar',
+                    question: 'Pertanyaan',
+                    transcript: 'Lihat Transkrip',
+                    listenTranscript: 'Dengarkan transkrip',
+                    answer: 'Jawaban',
+                    answerLabel: 'Jawaban:'
+                };
+
             let html = '';
 
             data.forEach((item, index) => {
@@ -4737,35 +4934,35 @@
                     <div class="title-section">
                         <i class="fas fa-chevron-right" style="transition: transform 0.3s;"></i>
                         <i class="fas fa-comment-dots" style="color: var(--primary-color);"></i>
-                        <strong>Percakapan ${item.id}</strong>
+                        <strong>${labels.conversation} ${item.id}</strong>
                         <span style="color: #666; font-weight: normal;">${item.title}</span>
                         <span class="badge ${levelBadge}">${levelLabel}</span>
                     </div>
                     <div class="audio-controls">
-                        <button onclick="event.stopPropagation(); speakFullTranscript(${transcriptJson}, this)" title="Dengarkan seluruh percakapan">
-                            <i class="fas fa-play"></i> Dengar
+                        <button onclick="event.stopPropagation(); speakFullTranscript(${transcriptJson}, this)" title="${labels.listenAll}">
+                            <i class="fas fa-play"></i> ${labels.listen}
                         </button>
                     </div>
                 </div>
                 <div class="listening-body">
                     <div class="question">
-                        <i class="fas fa-question-circle"></i> Pertanyaan: ${item.question}
+                        <i class="fas fa-question-circle"></i> ${labels.question}: ${item.question}
                     </div>
                     
                     <details class="transcript-section">
-                        <summary><i class="fas fa-file-alt"></i> Lihat Transkrip</summary>
+                        <summary><i class="fas fa-file-alt"></i> ${labels.transcript}</summary>
                         <div class="transcript-content">
                             ${item.transcript.map(line => `<div>${line}</div>`).join('')}
                             <div style="margin-top: 8px;">
                                 <button onclick="event.stopPropagation(); speakFullTranscript(${transcriptJson}, this)" style="background: #6c757d; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                                    <i class="fas fa-play"></i> Dengarkan transkrip
+                                    <i class="fas fa-play"></i> ${labels.listenTranscript}
                                 </button>
                             </div>
                         </div>
                     </details>
                     
                     <div class="answer-section">
-                        <strong><i class="fas fa-check-circle"></i> Jawaban:</strong> ${item.answer}
+                        <strong><i class="fas fa-check-circle"></i> ${labels.answerLabel}</strong> ${item.answer}
                     </div>
                 </div>
             </div>
