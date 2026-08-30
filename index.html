@@ -3862,20 +3862,6 @@
             });
         }
 
-        // ============ LISTENING LEVEL SWITCH ============
-        function switchListeningLevel(level) {
-            document.querySelectorAll('#listening .listening-content').forEach(el => el.style.display = 'none');
-            document.getElementById('listening' + level.toUpperCase()).style.display = 'block';
-
-            let btns = document.querySelectorAll('#listeningLevelSelector button');
-            btns.forEach(btn => btn.classList.remove('active-level'));
-            btns.forEach(btn => {
-                if (btn.textContent.trim().toLowerCase() === level) {
-                    btn.classList.add('active-level');
-                }
-            });
-        }
-
         // ============ FLASHCARD DATA ============
         const flashcardData = [
             // ==================== N5 KANJI (80 Kanji) ====================
@@ -4378,7 +4364,7 @@
 
             // Initialize reading and listening to N5
             switchReadingLevel('n5');
-            switchListeningLevel('n5');
+            initListening();
         });
 
         // ============ LISTENING DATA MANAGER ============
@@ -4388,6 +4374,13 @@
 
         // ============ LOAD DATA FROM JSON ============
         async function loadListeningData() {
+            if (location.protocol === 'file:') {
+                listeningData = getFallbackData();
+                isDataLoaded = true;
+                console.warn('Running from file://; using built-in fallback data because browser blocks local JSON fetches.');
+                return true;
+            }
+
             try {
                 const response = await fetch('listening-data.json');
                 if (!response.ok) {
@@ -4876,6 +4869,77 @@
             }
         }
 
+        function getLocalizedListeningItem(item, level) {
+            if (currentLanguage !== 'en') return item;
+
+            const englishByLevel = {
+                n5: {
+                    1: {
+                        title: 'Buying Apples',
+                        question: 'What will the woman buy in the conversation?',
+                        answer: 'The woman bought 3 apples.'
+                    },
+                    2: {
+                        title: 'Meeting at the Station',
+                        question: 'Where and what time will they meet?',
+                        answer: 'They will meet in front of the station at 3 o\'clock.'
+                    },
+                    3: {
+                        title: 'Ordering Food',
+                        question: 'What did the customer order?',
+                        answer: 'The customer ordered one ramen and a glass of water.'
+                    },
+                    4: {
+                        title: 'Asking for Directions',
+                        question: 'Where does the person want to go?',
+                        answer: 'The person wants to go to the post office.'
+                    },
+                    5: {
+                        title: 'Buying a Shirt',
+                        question: 'How much does the shirt cost?',
+                        answer: 'The shirt costs 2500 yen.'
+                    }
+                },
+                n4: {
+                    1: {
+                        title: 'Holiday Plan',
+                        question: 'What will the speaker do after this?',
+                        answer: 'The speaker will go to the bank, then have lunch with a friend.'
+                    },
+                    2: {
+                        title: 'Weather Forecast',
+                        question: 'What will the weather be like tomorrow?',
+                        answer: 'It will be sunny in the morning, but it will start raining in the afternoon.'
+                    },
+                    3: {
+                        title: 'Going to the Doctor',
+                        question: 'What did the doctor recommend?',
+                        answer: 'The doctor recommended resting and taking medicine for 3 days.'
+                    },
+                    4: {
+                        title: 'Hotel Reservation',
+                        question: 'When and how long will they stay?',
+                        answer: 'They will stay for 3 nights starting from December 25.'
+                    },
+                    5: {
+                        title: 'Phone Conversation',
+                        question: 'What will they do after the conversation?',
+                        answer: 'The speaker will call again later.'
+                    }
+                }
+            };
+
+            const itemTranslations = englishByLevel[level]?.[item.id];
+            if (!itemTranslations) return item;
+
+            return {
+                ...item,
+                title: itemTranslations.title || item.title,
+                question: itemTranslations.question || item.question,
+                answer: itemTranslations.answer || item.answer
+            };
+        }
+
         // ============ RENDER LISTENING CONTENT ============
         function renderListeningData(level) {
             if (!listeningData || !isDataLoaded) {
@@ -4924,6 +4988,7 @@
             let html = '';
 
             data.forEach((item, index) => {
+                const localizedItem = getLocalizedListeningItem(item, level);
                 const levelBadge = level === 'n5' ? 'badge-n5' : 'badge-n4';
                 const levelLabel = level === 'n5' ? 'N5' : 'N4';
                 const transcriptJson = JSON.stringify(item.transcript).replace(/"/g, '&quot;');
@@ -4934,8 +4999,8 @@
                     <div class="title-section">
                         <i class="fas fa-chevron-right" style="transition: transform 0.3s;"></i>
                         <i class="fas fa-comment-dots" style="color: var(--primary-color);"></i>
-                        <strong>${labels.conversation} ${item.id}</strong>
-                        <span style="color: #666; font-weight: normal;">${item.title}</span>
+                        <strong>${labels.conversation} ${localizedItem.id}</strong>
+                        <span style="color: #666; font-weight: normal;">${localizedItem.title}</span>
                         <span class="badge ${levelBadge}">${levelLabel}</span>
                     </div>
                     <div class="audio-controls">
@@ -4946,7 +5011,7 @@
                 </div>
                 <div class="listening-body">
                     <div class="question">
-                        <i class="fas fa-question-circle"></i> ${labels.question}: ${item.question}
+                        <i class="fas fa-question-circle"></i> ${labels.question}: ${localizedItem.question}
                     </div>
                     
                     <details class="transcript-section">
@@ -4962,7 +5027,7 @@
                     </details>
                     
                     <div class="answer-section">
-                        <strong><i class="fas fa-check-circle"></i> ${labels.answerLabel}</strong> ${item.answer}
+                        <strong><i class="fas fa-check-circle"></i> ${labels.answerLabel}</strong> ${localizedItem.answer}
                     </div>
                 </div>
             </div>
