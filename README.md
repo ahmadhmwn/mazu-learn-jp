@@ -53,4 +53,6 @@ mazu-learn-jp/
 
 
 # mazu-learn-jp
+Documentation: https://mazu-learn-jp.netlify.app/
 Learning Media Models: Web-based Independent Learning
+
