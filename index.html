@@ -4534,6 +4534,69 @@
         let speechQueue = [];
         let isQueueProcessing = false;
 
+        // Session guard: setiap stop/start menaikkan id ini, sehingga callback
+        // (onend / setTimeout) milik pemutaran lama berhenti sendiri dan tidak
+        // pernah menumpuk jadi dua suara.
+        let speechSessionId = 0;
+        let activeSpeechButton = null;
+        let speechTimerId = null;
+
+        function getListenLabel() {
+            return currentLanguage === 'en' ? 'Listen' : 'Dengar';
+        }
+
+        function setButtonSpeaking(buttonElement) {
+            if (!buttonElement) return;
+            if (!buttonElement.dataset.idleLabel) {
+                buttonElement.dataset.idleLabel = buttonElement.innerHTML;
+            }
+            buttonElement.classList.add('speaking');
+            buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
+        }
+
+        function resetSpeechButtons() {
+            document.querySelectorAll('.speaking').forEach(btn => {
+                btn.classList.remove('speaking');
+                btn.innerHTML = btn.dataset.idleLabel || ('<i class="fas fa-play"></i> ' + getListenLabel());
+            });
+        }
+
+        // Mulai sesi bicara baru. Mengembalikan id sesi, atau null bila klik ini
+        // berarti "matikan" (tombol yang sama ditekan saat sedang berbunyi).
+        function beginSpeechSession(buttonElement) {
+            const wasActive = !!buttonElement && activeSpeechButton === buttonElement;
+            stopSpeech();
+            if (wasActive) return null;
+
+            activeSpeechButton = buttonElement || null;
+            isSpeaking = true;
+            setButtonSpeaking(buttonElement);
+            return speechSessionId;
+        }
+
+        function isSpeechSessionActive(sessionId) {
+            return sessionId === speechSessionId;
+        }
+
+        // Chrome kadang menelan utterance yang di-speak() persis setelah cancel(),
+        // jadi setiap potongan dijadwalkan lewat timer yang ikut dijaga session id.
+        function scheduleSpeech(sessionId, fn, delay) {
+            speechTimerId = setTimeout(function () {
+                speechTimerId = null;
+                if (!isSpeechSessionActive(sessionId)) return;
+                fn();
+            }, delay);
+        }
+
+        function finishSpeechSession(sessionId) {
+            if (!isSpeechSessionActive(sessionId)) return;
+            speechSessionId++;
+            isSpeaking = false;
+            currentSpeech = null;
+            activeSpeechButton = null;
+            resetSpeechButtons();
+        }
+
         // ============ GET BEST JAPANESE VOICE ============
         function getBestJapaneseVoice() {
             const voices = window.speechSynthesis.getVoices();
@@ -4603,23 +4666,15 @@
 
         // ============ SPEAK WITH NATURAL SETTINGS ============
         function speakText(text, buttonElement) {
-            // Stop any ongoing speech
-            if (currentSpeech) {
-                window.speechSynthesis.cancel();
-                currentSpeech = null;
-                isSpeaking = false;
-                document.querySelectorAll('.speaking').forEach(btn => btn.classList.remove('speaking'));
-            }
-
-            if (buttonElement && buttonElement.classList.contains('speaking')) {
-                buttonElement.classList.remove('speaking');
-                return;
-            }
+            // Toggle: tombol yang sama ditekan lagi berarti stop, bukan mulai ulang
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             // Clean text
             const cleanText = text.replace(/[A-Z]:\s*/g, '').trim();
             if (!cleanText) {
                 console.warn('Text is empty');
+                stopSpeech();
                 return;
             }
 
@@ -4643,128 +4698,99 @@
 
             // Event handlers
             currentSpeech = speech;
-            isSpeaking = true;
-
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
 
             speech.onstart = function () {
                 console.log('Speech started');
             };
 
             speech.onend = function () {
-                isSpeaking = false;
-                currentSpeech = null;
-                if (buttonElement) {
-                    buttonElement.classList.remove('speaking');
-                    buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                }
+                finishSpeechSession(sessionId);
                 console.log('Speech ended');
             };
 
             speech.onerror = function (event) {
+                // 'canceled'/'interrupted' = hasil stopSpeech(), bukan kegagalan
+                if (event.error === 'canceled' || event.error === 'interrupted') return;
                 console.error('Speech error:', event.error);
 
                 // Jika error karena voice tidak tersedia, coba tanpa voice spesifik
-                if (event.error === 'voice-unavailable') {
+                if (event.error === 'voice-unavailable' && isSpeechSessionActive(sessionId)) {
                     speech.voice = null;
                     window.speechSynthesis.speak(speech);
-                } else if (event.error === 'canceled') {
-                    // Normal cancel, ignore
-                } else {
-                    isSpeaking = false;
-                    currentSpeech = null;
-                    if (buttonElement) {
-                        buttonElement.classList.remove('speaking');
-                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                    }
+                    return;
                 }
+                finishSpeechSession(sessionId);
             };
 
-            window.speechSynthesis.speak(speech);
+            scheduleSpeech(sessionId, function () {
+                window.speechSynthesis.speak(speech);
+            }, 60);
         }
 
         // ============ SPEAK WITH PUNCTUATION PAUSES ============
         function speakWithPauses(text, buttonElement) {
             // Split text by punctuation for better natural flow
-            const sentences = text.split(/[、。！？]/).filter(s => s.trim().length > 0);
+            const sentences = text
+                .split(/[、。！？]/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
 
-            if (sentences.length <= 1) {
-                speakText(text, buttonElement);
-                return;
-            }
+            if (sentences.length === 0) return;
+
+            // Toggle: tombol yang sama ditekan lagi berarti stop. Tanpa ini setiap
+            // klik memulai chain baru sementara chain lama tetap jalan -> dua suara.
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             // Speak sentence by sentence with natural pauses
             let index = 0;
-            let isCancelled = false;
 
             function speakNextSentence() {
-                if (isCancelled || index >= sentences.length) {
-                    if (buttonElement) {
-                        buttonElement.classList.remove('speaking');
-                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                    }
-                    isSpeaking = false;
+                if (!isSpeechSessionActive(sessionId)) return;
+
+                if (index >= sentences.length) {
+                    finishSpeechSession(sessionId);
                     return;
                 }
 
-                const sentence = sentences[index].trim();
-                if (sentence) {
-                    const speech = new SpeechSynthesisUtterance(sentence);
-                    speech.lang = 'ja-JP';
-                    speech.rate = 0.82;
-                    speech.pitch = 1.0;
+                const speech = new SpeechSynthesisUtterance(sentences[index]);
+                speech.lang = 'ja-JP';
+                speech.rate = 0.82;
+                speech.pitch = 1.0;
+                speech.volume = 1.0;
 
-                    const bestVoice = getBestJapaneseVoice();
-                    if (bestVoice) speech.voice = bestVoice;
+                const bestVoice = getBestJapaneseVoice();
+                if (bestVoice) speech.voice = bestVoice;
 
-                    speech.onend = function () {
-                        if (!isCancelled) {
-                            index++;
-                            // Natural pause between sentences (350ms)
-                            setTimeout(speakNextSentence, 350);
-                        }
-                    };
-
-                    speech.onerror = function (event) {
-                        if (event.error === 'canceled') {
-                            isCancelled = true;
-                        } else {
-                            index++;
-                            setTimeout(speakNextSentence, 200);
-                        }
-                    };
-
-                    window.speechSynthesis.speak(speech);
-                } else {
+                speech.onend = function () {
+                    if (!isSpeechSessionActive(sessionId)) return;
                     index++;
-                    speakNextSentence();
-                }
+                    // Natural pause between sentences (350ms)
+                    scheduleSpeech(sessionId, speakNextSentence, 350);
+                };
+
+                speech.onerror = function (event) {
+                    if (event.error === 'canceled' || event.error === 'interrupted') return;
+                    if (!isSpeechSessionActive(sessionId)) return;
+                    console.error('Speech error:', event.error);
+                    index++;
+                    scheduleSpeech(sessionId, speakNextSentence, 200);
+                };
+
+                currentSpeech = speech;
+                window.speechSynthesis.speak(speech);
             }
 
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
-            isSpeaking = true;
-
-            speakNextSentence();
-
-            // Store cancel function
-            currentSpeech = {
-                cancel: function () {
-                    isCancelled = true;
-                    window.speechSynthesis.cancel();
-                }
-            };
+            scheduleSpeech(sessionId, speakNextSentence, 60);
         }
 
         // ============ SPEAK WITH EMOTION ADJUSTMENT ============
         function speakWithEmotion(text, buttonElement, emotion = 'neutral') {
             const cleanText = text.replace(/[A-Z]:\s*/g, '').trim();
             if (!cleanText) return;
+
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             const speech = new SpeechSynthesisUtterance(cleanText);
             speech.lang = 'ja-JP';
@@ -4797,19 +4823,19 @@
             const bestVoice = getBestJapaneseVoice();
             if (bestVoice) speech.voice = bestVoice;
 
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
-
             speech.onend = function () {
-                if (buttonElement) {
-                    buttonElement.classList.remove('speaking');
-                    buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                }
+                finishSpeechSession(sessionId);
             };
 
-            window.speechSynthesis.speak(speech);
+            speech.onerror = function (event) {
+                if (event.error === 'canceled' || event.error === 'interrupted') return;
+                finishSpeechSession(sessionId);
+            };
+
+            currentSpeech = speech;
+            scheduleSpeech(sessionId, function () {
+                window.speechSynthesis.speak(speech);
+            }, 60);
         }
 
         // ============ SPEAK FULL TRANSCRIPT ============
@@ -4821,13 +4847,16 @@
 
         // ============ STOP SPEECH ============
         function stopSpeech() {
+            speechSessionId++;
+            if (speechTimerId !== null) {
+                clearTimeout(speechTimerId);
+                speechTimerId = null;
+            }
             window.speechSynthesis.cancel();
             isSpeaking = false;
             currentSpeech = null;
-            document.querySelectorAll('.speaking').forEach(btn => {
-                btn.classList.remove('speaking');
-                btn.innerHTML = '<i class="fas fa-play"></i> ' + (currentLanguage === 'en' ? 'Listen' : 'Dengar');
-            });
+            activeSpeechButton = null;
+            resetSpeechButtons();
         }
 
         // ============ TEST VOICE QUALITY ============
@@ -5034,6 +5063,9 @@
         `;
             });
 
+            // Render ulang membuang node tombol yang sedang aktif; hentikan dulu
+            // supaya audio tidak lanjut tanpa tombol Stop yang bisa ditekan.
+            stopSpeech();
             container.innerHTML = html;
         }
 
