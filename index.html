@@ -4540,6 +4540,47 @@
         let speechSessionId = 0;
         let activeSpeechButton = null;
         let speechTimerId = null;
+        let speechWatchdogId = null;
+        let speechNoticeTimerId = null;
+
+        function clearSpeechTimers() {
+            if (speechTimerId !== null) {
+                clearTimeout(speechTimerId);
+                speechTimerId = null;
+            }
+            if (speechWatchdogId !== null) {
+                clearTimeout(speechWatchdogId);
+                speechWatchdogId = null;
+            }
+        }
+
+        // Kegagalan TTS di HP nyaris selalu senyap (tidak ada error, tidak ada
+        // suara). Beri tahu pengguna alih-alih hanya console.warn.
+        function showSpeechNotice(message) {
+            let el = document.getElementById('speechNotice');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'speechNotice';
+                el.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);' +
+                    'max-width:90vw;background:#333;color:#fff;padding:12px 16px;border-radius:8px;' +
+                    'font-size:0.85rem;line-height:1.45;z-index:9999;text-align:center;' +
+                    'box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+                document.body.appendChild(el);
+            }
+            el.textContent = message;
+            el.style.display = 'block';
+            if (speechNoticeTimerId !== null) clearTimeout(speechNoticeTimerId);
+            speechNoticeTimerId = setTimeout(function () {
+                speechNoticeTimerId = null;
+                el.style.display = 'none';
+            }, 7000);
+        }
+
+        function showSpeechFailureNotice() {
+            showSpeechNotice(currentLanguage === 'en'
+                ? 'Audio could not play. Make sure your device is not on silent, and that a Japanese text-to-speech voice is installed in your device settings.'
+                : 'Suara tidak dapat diputar. Pastikan perangkat tidak dalam mode senyap, dan suara Jepang (Text-to-Speech) sudah terpasang di pengaturan perangkat.');
+        }
 
         function getListenLabel() {
             return currentLanguage === 'en' ? 'Listen' : 'Dengar';
@@ -4588,6 +4629,54 @@
             }, delay);
         }
 
+        // PENTING: speechSynthesis.speak() harus dipanggil langsung di dalam
+        // handler klik. iOS Safari menolak utterance yang dijadwalkan lewat
+        // setTimeout karena dianggap sudah keluar dari user gesture. Bug Chrome
+        // desktop yang menelan utterance tepat setelah cancel() ditangani oleh
+        // watchdog di bawah, bukan dengan menunda speak().
+        function speakNow(sessionId, utterance) {
+            if (!isSpeechSessionActive(sessionId)) return;
+
+            let started = false;
+            const userOnStart = utterance.onstart;
+            utterance.onstart = function (event) {
+                started = true;
+                if (speechWatchdogId !== null) {
+                    clearTimeout(speechWatchdogId);
+                    speechWatchdogId = null;
+                }
+                if (userOnStart) userOnStart.call(this, event);
+            };
+
+            currentSpeech = utterance;
+            window.speechSynthesis.speak(utterance);
+
+            speechWatchdogId = setTimeout(function () {
+                if (started || !isSpeechSessionActive(sessionId)) {
+                    speechWatchdogId = null;
+                    return;
+                }
+
+                // Belum berbunyi dan tidak ada apa pun di antrean: utterance
+                // ditelan browser (bug Chrome setelah cancel). Coba sekali lagi.
+                if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                    window.speechSynthesis.speak(utterance);
+                }
+
+                // Pemeriksaan terakhir. Sengaja tidak melihat `pending`: kalau
+                // utterance tersangkut di antrean selamanya (perangkat tanpa
+                // voice Jepang), justru itu kondisi yang harus dilaporkan.
+                speechWatchdogId = setTimeout(function () {
+                    speechWatchdogId = null;
+                    if (started || !isSpeechSessionActive(sessionId)) return;
+                    if (window.speechSynthesis.speaking) return;
+                    console.warn('Speech never started; kemungkinan tidak ada voice Jepang di perangkat ini');
+                    finishSpeechSession(sessionId);
+                    showSpeechFailureNotice();
+                }, 2000);
+            }, 400);
+        }
+
         function finishSpeechSession(sessionId) {
             if (!isSpeechSessionActive(sessionId)) return;
             speechSessionId++;
@@ -4598,10 +4687,22 @@
         }
 
         // ============ GET BEST JAPANESE VOICE ============
-        function getBestJapaneseVoice() {
-            const voices = window.speechSynthesis.getVoices();
+        function getJapaneseVoices() {
+            const voices = window.speechSynthesis.getVoices() || [];
+            return voices.filter(v => v.lang && v.lang.toLowerCase().indexOf('ja') === 0);
+        }
 
-            // Voice priority list (dari yang paling natural)
+        function getBestJapaneseVoice() {
+            const voices = window.speechSynthesis.getVoices() || [];
+            if (voices.length === 0) return null;
+
+            const japaneseVoices = getJapaneseVoices();
+
+            // Voice priority list (dari yang paling natural). Hanya berisi string:
+            // sebelumnya daftar ini juga menyisipkan objek voice lewat spread, lalu
+            // dipanggil priority.toLowerCase() -> TypeError di perangkat yang nama
+            // voice Jepangnya tidak ada di daftar (umum di Android), sehingga
+            // seluruh pemutaran gagal tanpa suara.
             const voicePriority = [
                 // Google Chrome voices (Windows/Mac)
                 'Google 日本語',
@@ -4610,29 +4711,27 @@
                 'Microsoft Haruka',
                 'Microsoft Ayumi',
                 'Microsoft Ichiro',
-                // Mac OS voices
+                // Mac OS / iOS voices
                 'Kyoko',
-                'Otoya',
-                // Fallback to any Japanese voice
-                ...voices.filter(v => v.lang.startsWith('ja'))
+                'Otoya'
             ];
 
-            // Cari berdasarkan prioritas
             for (const priority of voicePriority) {
-                const found = voices.find(v =>
-                    v.name.includes(priority) ||
-                    v.name === priority ||
-                    v.name.toLowerCase().includes(priority.toLowerCase())
-                );
+                const needle = priority.toLowerCase();
+                const found = japaneseVoices.find(v => v.name.toLowerCase().includes(needle));
                 if (found) return found;
             }
 
-            // Fallback: cari voice Jepang pertama
-            const japaneseVoice = voices.find(v => v.lang.startsWith('ja'));
-            if (japaneseVoice) return japaneseVoice;
+            // Voice Jepang apa pun. Penamaannya berbeda-beda di Android/iOS
+            // (mis. '日本語 日本', 'ja-JP-language'), jadi cocokkan lewat lang,
+            // bukan nama. Utamakan voice lokal supaya tetap jalan tanpa internet.
+            if (japaneseVoices.length > 0) {
+                return japaneseVoices.find(v => v.localService) || japaneseVoices[0];
+            }
 
-            // Jika tidak ada voice Jepang, gunakan default
-            return voices[0] || null;
+            // Tidak ada voice Jepang sama sekali: jangan paksa voice bahasa lain.
+            // Biarkan browser memilih sendiri dari speech.lang = 'ja-JP'.
+            return null;
         }
 
         // ============ GET VOICE BY NAME ============
@@ -4720,11 +4819,10 @@
                     return;
                 }
                 finishSpeechSession(sessionId);
+                showSpeechFailureNotice();
             };
 
-            scheduleSpeech(sessionId, function () {
-                window.speechSynthesis.speak(speech);
-            }, 60);
+            speakNow(sessionId, speech);
         }
 
         // ============ SPEAK WITH PUNCTUATION PAUSES ============
@@ -4773,15 +4871,24 @@
                     if (event.error === 'canceled' || event.error === 'interrupted') return;
                     if (!isSpeechSessionActive(sessionId)) return;
                     console.error('Speech error:', event.error);
+
+                    // Gagal di kalimat pertama = TTS memang tidak bisa jalan di
+                    // perangkat ini; tidak ada gunanya melanjutkan ke kalimat lain.
+                    if (index === 0) {
+                        finishSpeechSession(sessionId);
+                        showSpeechFailureNotice();
+                        return;
+                    }
                     index++;
                     scheduleSpeech(sessionId, speakNextSentence, 200);
                 };
 
-                currentSpeech = speech;
-                window.speechSynthesis.speak(speech);
+                speakNow(sessionId, speech);
             }
 
-            scheduleSpeech(sessionId, speakNextSentence, 60);
+            // Dipanggil langsung, bukan lewat setTimeout, supaya utterance
+            // pertama tetap berada di dalam user gesture (syarat iOS Safari).
+            speakNextSentence();
         }
 
         // ============ SPEAK WITH EMOTION ADJUSTMENT ============
@@ -4832,10 +4939,7 @@
                 finishSpeechSession(sessionId);
             };
 
-            currentSpeech = speech;
-            scheduleSpeech(sessionId, function () {
-                window.speechSynthesis.speak(speech);
-            }, 60);
+            speakNow(sessionId, speech);
         }
 
         // ============ SPEAK FULL TRANSCRIPT ============
@@ -4848,10 +4952,7 @@
         // ============ STOP SPEECH ============
         function stopSpeech() {
             speechSessionId++;
-            if (speechTimerId !== null) {
-                clearTimeout(speechTimerId);
-                speechTimerId = null;
-            }
+            clearSpeechTimers();
             window.speechSynthesis.cancel();
             isSpeaking = false;
             currentSpeech = null;
