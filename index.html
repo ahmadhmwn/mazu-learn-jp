@@ -4534,11 +4534,175 @@
         let speechQueue = [];
         let isQueueProcessing = false;
 
-        // ============ GET BEST JAPANESE VOICE ============
-        function getBestJapaneseVoice() {
-            const voices = window.speechSynthesis.getVoices();
+        // Session guard: setiap stop/start menaikkan id ini, sehingga callback
+        // (onend / setTimeout) milik pemutaran lama berhenti sendiri dan tidak
+        // pernah menumpuk jadi dua suara.
+        let speechSessionId = 0;
+        let activeSpeechButton = null;
+        let speechTimerId = null;
+        let speechWatchdogId = null;
+        let speechNoticeTimerId = null;
 
-            // Voice priority list (dari yang paling natural)
+        function clearSpeechTimers() {
+            if (speechTimerId !== null) {
+                clearTimeout(speechTimerId);
+                speechTimerId = null;
+            }
+            if (speechWatchdogId !== null) {
+                clearTimeout(speechWatchdogId);
+                speechWatchdogId = null;
+            }
+        }
+
+        // Kegagalan TTS di HP nyaris selalu senyap (tidak ada error, tidak ada
+        // suara). Beri tahu pengguna alih-alih hanya console.warn.
+        function showSpeechNotice(message) {
+            let el = document.getElementById('speechNotice');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'speechNotice';
+                el.style.cssText = 'position:fixed;left:50%;bottom:20px;transform:translateX(-50%);' +
+                    'max-width:90vw;background:#333;color:#fff;padding:12px 16px;border-radius:8px;' +
+                    'font-size:0.85rem;line-height:1.45;z-index:9999;text-align:center;' +
+                    'box-shadow:0 4px 14px rgba(0,0,0,0.3);';
+                document.body.appendChild(el);
+            }
+            el.textContent = message;
+            el.style.display = 'block';
+            if (speechNoticeTimerId !== null) clearTimeout(speechNoticeTimerId);
+            speechNoticeTimerId = setTimeout(function () {
+                speechNoticeTimerId = null;
+                el.style.display = 'none';
+            }, 7000);
+        }
+
+        function showSpeechFailureNotice() {
+            showSpeechNotice(currentLanguage === 'en'
+                ? 'Audio could not play. Make sure your device is not on silent, and that a Japanese text-to-speech voice is installed in your device settings.'
+                : 'Suara tidak dapat diputar. Pastikan perangkat tidak dalam mode senyap, dan suara Jepang (Text-to-Speech) sudah terpasang di pengaturan perangkat.');
+        }
+
+        function getListenLabel() {
+            return currentLanguage === 'en' ? 'Listen' : 'Dengar';
+        }
+
+        function setButtonSpeaking(buttonElement) {
+            if (!buttonElement) return;
+            if (!buttonElement.dataset.idleLabel) {
+                buttonElement.dataset.idleLabel = buttonElement.innerHTML;
+            }
+            buttonElement.classList.add('speaking');
+            buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
+        }
+
+        function resetSpeechButtons() {
+            document.querySelectorAll('.speaking').forEach(btn => {
+                btn.classList.remove('speaking');
+                btn.innerHTML = btn.dataset.idleLabel || ('<i class="fas fa-play"></i> ' + getListenLabel());
+            });
+        }
+
+        // Mulai sesi bicara baru. Mengembalikan id sesi, atau null bila klik ini
+        // berarti "matikan" (tombol yang sama ditekan saat sedang berbunyi).
+        function beginSpeechSession(buttonElement) {
+            const wasActive = !!buttonElement && activeSpeechButton === buttonElement;
+            stopSpeech();
+            if (wasActive) return null;
+
+            activeSpeechButton = buttonElement || null;
+            isSpeaking = true;
+            setButtonSpeaking(buttonElement);
+            return speechSessionId;
+        }
+
+        function isSpeechSessionActive(sessionId) {
+            return sessionId === speechSessionId;
+        }
+
+        // Chrome kadang menelan utterance yang di-speak() persis setelah cancel(),
+        // jadi setiap potongan dijadwalkan lewat timer yang ikut dijaga session id.
+        function scheduleSpeech(sessionId, fn, delay) {
+            speechTimerId = setTimeout(function () {
+                speechTimerId = null;
+                if (!isSpeechSessionActive(sessionId)) return;
+                fn();
+            }, delay);
+        }
+
+        // PENTING: speechSynthesis.speak() harus dipanggil langsung di dalam
+        // handler klik. iOS Safari menolak utterance yang dijadwalkan lewat
+        // setTimeout karena dianggap sudah keluar dari user gesture. Bug Chrome
+        // desktop yang menelan utterance tepat setelah cancel() ditangani oleh
+        // watchdog di bawah, bukan dengan menunda speak().
+        function speakNow(sessionId, utterance) {
+            if (!isSpeechSessionActive(sessionId)) return;
+
+            let started = false;
+            const userOnStart = utterance.onstart;
+            utterance.onstart = function (event) {
+                started = true;
+                if (speechWatchdogId !== null) {
+                    clearTimeout(speechWatchdogId);
+                    speechWatchdogId = null;
+                }
+                if (userOnStart) userOnStart.call(this, event);
+            };
+
+            currentSpeech = utterance;
+            window.speechSynthesis.speak(utterance);
+
+            speechWatchdogId = setTimeout(function () {
+                if (started || !isSpeechSessionActive(sessionId)) {
+                    speechWatchdogId = null;
+                    return;
+                }
+
+                // Belum berbunyi dan tidak ada apa pun di antrean: utterance
+                // ditelan browser (bug Chrome setelah cancel). Coba sekali lagi.
+                if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                    window.speechSynthesis.speak(utterance);
+                }
+
+                // Pemeriksaan terakhir. Sengaja tidak melihat `pending`: kalau
+                // utterance tersangkut di antrean selamanya (perangkat tanpa
+                // voice Jepang), justru itu kondisi yang harus dilaporkan.
+                speechWatchdogId = setTimeout(function () {
+                    speechWatchdogId = null;
+                    if (started || !isSpeechSessionActive(sessionId)) return;
+                    if (window.speechSynthesis.speaking) return;
+                    console.warn('Speech never started; kemungkinan tidak ada voice Jepang di perangkat ini');
+                    finishSpeechSession(sessionId);
+                    showSpeechFailureNotice();
+                }, 2000);
+            }, 400);
+        }
+
+        function finishSpeechSession(sessionId) {
+            if (!isSpeechSessionActive(sessionId)) return;
+            speechSessionId++;
+            isSpeaking = false;
+            currentSpeech = null;
+            activeSpeechButton = null;
+            resetSpeechButtons();
+        }
+
+        // ============ GET BEST JAPANESE VOICE ============
+        function getJapaneseVoices() {
+            const voices = window.speechSynthesis.getVoices() || [];
+            return voices.filter(v => v.lang && v.lang.toLowerCase().indexOf('ja') === 0);
+        }
+
+        function getBestJapaneseVoice() {
+            const voices = window.speechSynthesis.getVoices() || [];
+            if (voices.length === 0) return null;
+
+            const japaneseVoices = getJapaneseVoices();
+
+            // Voice priority list (dari yang paling natural). Hanya berisi string:
+            // sebelumnya daftar ini juga menyisipkan objek voice lewat spread, lalu
+            // dipanggil priority.toLowerCase() -> TypeError di perangkat yang nama
+            // voice Jepangnya tidak ada di daftar (umum di Android), sehingga
+            // seluruh pemutaran gagal tanpa suara.
             const voicePriority = [
                 // Google Chrome voices (Windows/Mac)
                 'Google 日本語',
@@ -4547,29 +4711,27 @@
                 'Microsoft Haruka',
                 'Microsoft Ayumi',
                 'Microsoft Ichiro',
-                // Mac OS voices
+                // Mac OS / iOS voices
                 'Kyoko',
-                'Otoya',
-                // Fallback to any Japanese voice
-                ...voices.filter(v => v.lang.startsWith('ja'))
+                'Otoya'
             ];
 
-            // Cari berdasarkan prioritas
             for (const priority of voicePriority) {
-                const found = voices.find(v =>
-                    v.name.includes(priority) ||
-                    v.name === priority ||
-                    v.name.toLowerCase().includes(priority.toLowerCase())
-                );
+                const needle = priority.toLowerCase();
+                const found = japaneseVoices.find(v => v.name.toLowerCase().includes(needle));
                 if (found) return found;
             }
 
-            // Fallback: cari voice Jepang pertama
-            const japaneseVoice = voices.find(v => v.lang.startsWith('ja'));
-            if (japaneseVoice) return japaneseVoice;
+            // Voice Jepang apa pun. Penamaannya berbeda-beda di Android/iOS
+            // (mis. '日本語 日本', 'ja-JP-language'), jadi cocokkan lewat lang,
+            // bukan nama. Utamakan voice lokal supaya tetap jalan tanpa internet.
+            if (japaneseVoices.length > 0) {
+                return japaneseVoices.find(v => v.localService) || japaneseVoices[0];
+            }
 
-            // Jika tidak ada voice Jepang, gunakan default
-            return voices[0] || null;
+            // Tidak ada voice Jepang sama sekali: jangan paksa voice bahasa lain.
+            // Biarkan browser memilih sendiri dari speech.lang = 'ja-JP'.
+            return null;
         }
 
         // ============ GET VOICE BY NAME ============
@@ -4603,23 +4765,15 @@
 
         // ============ SPEAK WITH NATURAL SETTINGS ============
         function speakText(text, buttonElement) {
-            // Stop any ongoing speech
-            if (currentSpeech) {
-                window.speechSynthesis.cancel();
-                currentSpeech = null;
-                isSpeaking = false;
-                document.querySelectorAll('.speaking').forEach(btn => btn.classList.remove('speaking'));
-            }
-
-            if (buttonElement && buttonElement.classList.contains('speaking')) {
-                buttonElement.classList.remove('speaking');
-                return;
-            }
+            // Toggle: tombol yang sama ditekan lagi berarti stop, bukan mulai ulang
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             // Clean text
             const cleanText = text.replace(/[A-Z]:\s*/g, '').trim();
             if (!cleanText) {
                 console.warn('Text is empty');
+                stopSpeech();
                 return;
             }
 
@@ -4643,128 +4797,107 @@
 
             // Event handlers
             currentSpeech = speech;
-            isSpeaking = true;
-
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
 
             speech.onstart = function () {
                 console.log('Speech started');
             };
 
             speech.onend = function () {
-                isSpeaking = false;
-                currentSpeech = null;
-                if (buttonElement) {
-                    buttonElement.classList.remove('speaking');
-                    buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                }
+                finishSpeechSession(sessionId);
                 console.log('Speech ended');
             };
 
             speech.onerror = function (event) {
+                // 'canceled'/'interrupted' = hasil stopSpeech(), bukan kegagalan
+                if (event.error === 'canceled' || event.error === 'interrupted') return;
                 console.error('Speech error:', event.error);
 
                 // Jika error karena voice tidak tersedia, coba tanpa voice spesifik
-                if (event.error === 'voice-unavailable') {
+                if (event.error === 'voice-unavailable' && isSpeechSessionActive(sessionId)) {
                     speech.voice = null;
                     window.speechSynthesis.speak(speech);
-                } else if (event.error === 'canceled') {
-                    // Normal cancel, ignore
-                } else {
-                    isSpeaking = false;
-                    currentSpeech = null;
-                    if (buttonElement) {
-                        buttonElement.classList.remove('speaking');
-                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                    }
+                    return;
                 }
+                finishSpeechSession(sessionId);
+                showSpeechFailureNotice();
             };
 
-            window.speechSynthesis.speak(speech);
+            speakNow(sessionId, speech);
         }
 
         // ============ SPEAK WITH PUNCTUATION PAUSES ============
         function speakWithPauses(text, buttonElement) {
             // Split text by punctuation for better natural flow
-            const sentences = text.split(/[、。！？]/).filter(s => s.trim().length > 0);
+            const sentences = text
+                .split(/[、。！？]/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0);
 
-            if (sentences.length <= 1) {
-                speakText(text, buttonElement);
-                return;
-            }
+            if (sentences.length === 0) return;
+
+            // Toggle: tombol yang sama ditekan lagi berarti stop. Tanpa ini setiap
+            // klik memulai chain baru sementara chain lama tetap jalan -> dua suara.
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             // Speak sentence by sentence with natural pauses
             let index = 0;
-            let isCancelled = false;
 
             function speakNextSentence() {
-                if (isCancelled || index >= sentences.length) {
-                    if (buttonElement) {
-                        buttonElement.classList.remove('speaking');
-                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                    }
-                    isSpeaking = false;
+                if (!isSpeechSessionActive(sessionId)) return;
+
+                if (index >= sentences.length) {
+                    finishSpeechSession(sessionId);
                     return;
                 }
 
-                const sentence = sentences[index].trim();
-                if (sentence) {
-                    const speech = new SpeechSynthesisUtterance(sentence);
-                    speech.lang = 'ja-JP';
-                    speech.rate = 0.82;
-                    speech.pitch = 1.0;
+                const speech = new SpeechSynthesisUtterance(sentences[index]);
+                speech.lang = 'ja-JP';
+                speech.rate = 0.82;
+                speech.pitch = 1.0;
+                speech.volume = 1.0;
 
-                    const bestVoice = getBestJapaneseVoice();
-                    if (bestVoice) speech.voice = bestVoice;
+                const bestVoice = getBestJapaneseVoice();
+                if (bestVoice) speech.voice = bestVoice;
 
-                    speech.onend = function () {
-                        if (!isCancelled) {
-                            index++;
-                            // Natural pause between sentences (350ms)
-                            setTimeout(speakNextSentence, 350);
-                        }
-                    };
-
-                    speech.onerror = function (event) {
-                        if (event.error === 'canceled') {
-                            isCancelled = true;
-                        } else {
-                            index++;
-                            setTimeout(speakNextSentence, 200);
-                        }
-                    };
-
-                    window.speechSynthesis.speak(speech);
-                } else {
+                speech.onend = function () {
+                    if (!isSpeechSessionActive(sessionId)) return;
                     index++;
-                    speakNextSentence();
-                }
+                    // Natural pause between sentences (350ms)
+                    scheduleSpeech(sessionId, speakNextSentence, 350);
+                };
+
+                speech.onerror = function (event) {
+                    if (event.error === 'canceled' || event.error === 'interrupted') return;
+                    if (!isSpeechSessionActive(sessionId)) return;
+                    console.error('Speech error:', event.error);
+
+                    // Gagal di kalimat pertama = TTS memang tidak bisa jalan di
+                    // perangkat ini; tidak ada gunanya melanjutkan ke kalimat lain.
+                    if (index === 0) {
+                        finishSpeechSession(sessionId);
+                        showSpeechFailureNotice();
+                        return;
+                    }
+                    index++;
+                    scheduleSpeech(sessionId, speakNextSentence, 200);
+                };
+
+                speakNow(sessionId, speech);
             }
 
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
-            isSpeaking = true;
-
+            // Dipanggil langsung, bukan lewat setTimeout, supaya utterance
+            // pertama tetap berada di dalam user gesture (syarat iOS Safari).
             speakNextSentence();
-
-            // Store cancel function
-            currentSpeech = {
-                cancel: function () {
-                    isCancelled = true;
-                    window.speechSynthesis.cancel();
-                }
-            };
         }
 
         // ============ SPEAK WITH EMOTION ADJUSTMENT ============
         function speakWithEmotion(text, buttonElement, emotion = 'neutral') {
             const cleanText = text.replace(/[A-Z]:\s*/g, '').trim();
             if (!cleanText) return;
+
+            const sessionId = beginSpeechSession(buttonElement);
+            if (sessionId === null) return;
 
             const speech = new SpeechSynthesisUtterance(cleanText);
             speech.lang = 'ja-JP';
@@ -4797,19 +4930,16 @@
             const bestVoice = getBestJapaneseVoice();
             if (bestVoice) speech.voice = bestVoice;
 
-            if (buttonElement) {
-                buttonElement.classList.add('speaking');
-                buttonElement.innerHTML = '<i class="fas fa-stop"></i> Stop';
-            }
-
             speech.onend = function () {
-                if (buttonElement) {
-                    buttonElement.classList.remove('speaking');
-                    buttonElement.innerHTML = '<i class="fas fa-play"></i> Dengar';
-                }
+                finishSpeechSession(sessionId);
             };
 
-            window.speechSynthesis.speak(speech);
+            speech.onerror = function (event) {
+                if (event.error === 'canceled' || event.error === 'interrupted') return;
+                finishSpeechSession(sessionId);
+            };
+
+            speakNow(sessionId, speech);
         }
 
         // ============ SPEAK FULL TRANSCRIPT ============
@@ -4821,13 +4951,13 @@
 
         // ============ STOP SPEECH ============
         function stopSpeech() {
+            speechSessionId++;
+            clearSpeechTimers();
             window.speechSynthesis.cancel();
             isSpeaking = false;
             currentSpeech = null;
-            document.querySelectorAll('.speaking').forEach(btn => {
-                btn.classList.remove('speaking');
-                btn.innerHTML = '<i class="fas fa-play"></i> ' + (currentLanguage === 'en' ? 'Listen' : 'Dengar');
-            });
+            activeSpeechButton = null;
+            resetSpeechButtons();
         }
 
         // ============ TEST VOICE QUALITY ============
@@ -5034,6 +5164,9 @@
         `;
             });
 
+            // Render ulang membuang node tombol yang sedang aktif; hentikan dulu
+            // supaya audio tidak lanjut tanpa tombol Stop yang bisa ditekan.
+            stopSpeech();
             container.innerHTML = html;
         }
 
